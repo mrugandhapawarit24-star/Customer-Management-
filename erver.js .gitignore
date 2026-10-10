@@ -1,0 +1,634 @@
+[1mdiff --git a/server.js b/server.js[m
+[1mindex 621097c..9023845 100644[m
+[1m--- a/server.js[m
+[1m+++ b/server.js[m
+[36m@@ -1,43 +1,919 @@[m
+[31m-const express = require('express');[m
+[31m-const mongoose= require('mongoose');[m
+[31m-const core = require('cors');[m
+[32m+[m[32mconst express = require("express");[m[41m[m
+[32m+[m[32mconst mongoose = require("mongoose");[m[41m[m
+[32m+[m[32mconst core = require("cors");[m[41m[m
+ [m
+ const app = express();[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[32m// MIDDLEWARE[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[41m[m
+ app.use(express.static("public"));[m
+ app.use(core());[m
+ app.use(express.json());[m
+ [m
+[31m-mongoose.connect("mongodb://127.0.0.1:27017/CustomerDB")[m
+[32m+[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[32m// MONGODB CONNECTION[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mmongoose[m[41m[m
+[32m+[m[32m    .connect("mongodb://127.0.0.1:27017/CustomerDB")[m[41m[m
+     .then(() => {[m
+         console.log("MongoDB Connected");[m
+     })[m
+     .catch((error) => {[m
+         console.error("MongoDB Connection Error:", error);[m
+     });[m
+[31m-    [m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[32m// CUSTOMER SCHEMA[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[41m[m
+ const CustomerSchema = new mongoose.Schema({[m
+[31m-    name: String,[m
+[31m-    email: String,[m
+[31m-    phone: String[m
+[32m+[m[41m[m
+[32m+[m[32m    name: {[m[41m[m
+[32m+[m[32m        type: String,[m[41m[m
+[32m+[m[32m        required: [true, "Name is required"],[m[41m[m
+[32m+[m[32m        trim: true,[m[41m[m
+[32m+[m[32m        minlength: [2, "Name must contain at least 2 characters"],[m[41m[m
+[32m+[m[32m        match: [[m[41m[m
+[32m+[m[32m            /^[A-Za-z ]+$/,[m[41m[m
+[32m+[m[32m            "Name can contain only letters and spaces"[m[41m[m
+[32m+[m[32m        ][m[41m[m
+[32m+[m[32m    },[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    email: {[m[41m[m
+[32m+[m[32m        type: String,[m[41m[m
+[32m+[m[32m        required: [true, "Email is required"],[m[41m[m
+[32m+[m[32m        trim: true,[m[41m[m
+[32m+[m[32m        lowercase: true,[m[41m[m
+[32m+[m[32m        match: [[m[41m[m
+[32m+[m[32m            /^[^\s@]+@[^\s@]+\.[^\s@]+$/,[m[41m[m
+[32m+[m[32m            "Please enter a valid email address"[m[41m[m
+[32m+[m[32m        ],[m[41m[m
+[32m+[m[32m        unique: true[m[41m[m
+[32m+[m[32m    },[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    phone: {[m[41m[m
+[32m+[m[32m        type: String,[m[41m[m
+[32m+[m[32m        required: [true, "Phone number is required"],[m[41m[m
+[32m+[m[32m        match: [[m[41m[m
+[32m+[m[32m            /^[0-9]{10}$/,[m[41m[m
+[32m+[m[32m            "Phone number must contain exactly 10 digits"[m[41m[m
+[32m+[m[32m        ],[m[41m[m
+[32m+[m[32m        unique: true[m[41m[m
+[32m+[m[32m    }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m});[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mconst Customer = mongoose.model("Customer", CustomerSchema);[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[32m// TRANSACTION SCHEMA[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mconst TransactionSchema = new mongoose.Schema({[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    customerId: {[m[41m[m
+[32m+[m[32m        type: mongoose.Schema.Types.ObjectId,[m[41m[m
+[32m+[m[32m        ref: "Customer",[m[41m[m
+[32m+[m[32m        required: [true, "Customer ID is required"][m[41m[m
+[32m+[m[32m    },[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    amount: {[m[41m[m
+[32m+[m[32m        type: Number,[m[41m[m
+[32m+[m[32m        required: [true, "Transaction amount is required"],[m[41m[m
+[32m+[m[32m        min: [1, "Transaction amount must be greater than 0"][m[41m[m
+[32m+[m[32m    },[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    product: {[m[41m[m
+[32m+[m[32m        type: String,[m[41m[m
+[32m+[m[32m        required: [true, "Product name is required"],[m[41m[m
+[32m+[m[32m        trim: true[m[41m[m
+[32m+[m[32m    },[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    transactionDate: {[m[41m[m
+[32m+[m[32m        type: Date,[m[41m[m
+[32m+[m[32m        required: [true, "Transaction date is required"],[m[41m[m
+[32m+[m[32m        default: Date.now[m[41m[m
+[32m+[m[32m    }[m[41m[m
+[32m+[m[41m[m
+ });[m
+[31m-const Customer = mongoose.model('Customer', CustomerSchema);  [m
+[31m-app.get('/customers', async (req, res) => {[m
+[31m-    const customers = await Customer.find();[m
+[31m-    res.json(customers);[m
+[32m+[m[41m[m
+[32m+[m[32mconst Transaction = mongoose.model([m[41m[m
+[32m+[m[32m    "Transaction",[m[41m[m
+[32m+[m[32m    TransactionSchema[m[41m[m
+[32m+[m[32m);[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[32m// 1. GET ALL CUSTOMERS[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mapp.get("/customers", async (req, res) => {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    try {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        const customers = await Customer.find();[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        res.json(customers);[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    } catch (error) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        res.status(500).json({[m[41m[m
+[32m+[m[32m            success: false,[m[41m[m
+[32m+[m[32m            message: "Could not fetch customers"[m[41m[m
+[32m+[m[32m        });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m});[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[32m// 2. SEARCH CUSTOMERS[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mapp.get("/customers/search", async (req, res) => {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    try {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        const { name, email, phone } = req.query;[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        const filter = {};[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        // Search by name[m[41m[m
+[32m+[m[32m        if (name) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            filter.name = {[m[41m[m
+[32m+[m[32m                $regex: name,[m[41m[m
+[32m+[m[32m                $options: "i"[m[41m[m
+[32m+[m[32m            };[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        // Search by email[m[41m[m
+[32m+[m[32m        if (email) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            filter.email = {[m[41m[m
+[32m+[m[32m                $regex: email,[m[41m[m
+[32m+[m[32m                $options: "i"[m[41m[m
+[32m+[m[32m            };[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        // Search by phone[m[41m[m
+[32m+[m[32m        if (phone) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            filter.phone = {[m[41m[m
+[32m+[m[32m                $regex: phone[m[41m[m
+[32m+[m[32m            };[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        const customers = await Customer.find(filter);[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        res.json({[m[41m[m
+[32m+[m[32m            success: true,[m[41m[m
+[32m+[m[32m            count: customers.length,[m[41m[m
+[32m+[m[32m            customers: customers[m[41m[m
+[32m+[m[32m        });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    } catch (error) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        res.status(500).json({[m[41m[m
+[32m+[m[32m            success: false,[m[41m[m
+[32m+[m[32m            message: "Could not search customers"[m[41m[m
+[32m+[m[32m        });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    }[m[41m[m
+[32m+[m[41m[m
+ });[m
+[31m-app.post('/customers', async (req, res) => {[m
+[31m-    const customer = new Customer(req.body);[m
+[31m-    await customer.save();[m
+[31m-    res.json(customer);[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[32m// 3. GET CUSTOMER BY ID[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mapp.get("/customers/:id", async (req, res) => {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    try {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        const customer = await Customer.findById([m[41m[m
+[32m+[m[32m            req.params.id[m[41m[m
+[32m+[m[32m        );[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        if (!customer) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            return res.status(404).json({[m[41m[m
+[32m+[m[32m                success: false,[m[41m[m
+[32m+[m[32m                message: "Customer not found"[m[41m[m
+[32m+[m[32m            });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        res.json({[m[41m[m
+[32m+[m[32m            success: true,[m[41m[m
+[32m+[m[32m            customer: customer[m[41m[m
+[32m+[m[32m        });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    } catch (error) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        res.status(400).json({[m[41m[m
+[32m+[m[32m            success: false,[m[41m[m
+[32m+[m[32m            message: "Invalid customer ID"[m[41m[m
+[32m+[m[32m        });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    }[m[41m[m
+[32m+[m[41m[m
+ });[m
+ [m
+[32m+[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[32m// 4. ADD CUSTOMER[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mapp.post("/customers", async (req, res) => {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    try {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        const customer = new Customer(req.body);[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        const savedCustomer = await customer.save();[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        res.status(201).json({[m[41m[m
+[32m+[m[32m            success: true,[m[41m[m
+[32m+[m[32m            message: "Customer added successfully",[m[41m[m
+[32m+[m[32m            customer: savedCustomer[m[41m[m
+[32m+[m[32m        });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    } catch (error) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        // Duplicate email or phone[m[41m[m
+[32m+[m[32m        if (error.code === 11000) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            const field = Object.keys(error.keyPattern)[0];[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            return res.status(400).json({[m[41m[m
+[32m+[m[32m                success: false,[m[41m[m
+[32m+[m[32m                message: `${field} already exists`[m[41m[m
+[32m+[m[32m            });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        // Validation errors[m[41m[m
+[32m+[m[32m        if (error.name === "ValidationError") {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            const messages = Object.values(error.errors)[m[41m[m
+[32m+[m[32m                .map(err => err.message);[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            return res.status(400).json({[m[41m[m
+[32m+[m[32m                success: false,[m[41m[m
+[32m+[m[32m                message: messages.join(", ")[m[41m[m
+[32m+[m[32m            });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        // Other errors[m[41m[m
+[32m+[m[32m        res.status(500).json({[m[41m[m
+[32m+[m[32m            success: false,[m[41m[m
+[32m+[m[32m            message: "Server error"[m[41m[m
+[32m+[m[32m        });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m});[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[32m// 5. UPDATE CUSTOMER[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[41m[m
+ app.put("/customers/:id", async (req, res) => {[m
+[31m-     const customer = await Customer.findByIdAndUpdate(req.params.id, req.body, { new: true });[m
+[31m-     res.json(customer);[m
+[32m+[m[41m[m
+[32m+[m[32m    try {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        const customer = await Customer.findByIdAndUpdate([m[41m[m
+[32m+[m[32m            req.params.id,[m[41m[m
+[32m+[m[32m            req.body,[m[41m[m
+[32m+[m[32m            {[m[41m[m
+[32m+[m[32m                new: true,[m[41m[m
+[32m+[m[32m                runValidators: true[m[41m[m
+[32m+[m[32m            }[m[41m[m
+[32m+[m[32m        );[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        if (!customer) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            return res.status(404).json({[m[41m[m
+[32m+[m[32m                success: false,[m[41m[m
+[32m+[m[32m                message: "Customer not found"[m[41m[m
+[32m+[m[32m            });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        res.json({[m[41m[m
+[32m+[m[32m            success: true,[m[41m[m
+[32m+[m[32m            message: "Customer updated successfully",[m[41m[m
+[32m+[m[32m            customer: customer[m[41m[m
+[32m+[m[32m        });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    } catch (error) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        // Duplicate email or phone[m[41m[m
+[32m+[m[32m        if (error.code === 11000) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            const field = Object.keys(error.keyPattern)[0];[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            return res.status(400).json({[m[41m[m
+[32m+[m[32m                success: false,[m[41m[m
+[32m+[m[32m                message: `${field} already exists`[m[41m[m
+[32m+[m[32m            });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        // Validation errors[m[41m[m
+[32m+[m[32m        if (error.name === "ValidationError") {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            const messages = Object.values(error.errors)[m[41m[m
+[32m+[m[32m                .map(err => err.message);[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            return res.status(400).json({[m[41m[m
+[32m+[m[32m                success: false,[m[41m[m
+[32m+[m[32m                message: messages.join(", ")[m[41m[m
+[32m+[m[32m            });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        // Other errors[m[41m[m
+[32m+[m[32m        res.status(500).json({[m[41m[m
+[32m+[m[32m            success: false,[m[41m[m
+[32m+[m[32m            message: "Server error"[m[41m[m
+[32m+[m[32m        });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    }[m[41m[m
+[32m+[m[41m[m
+ });[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[32m// 6. DELETE CUSTOMER[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[41m[m
+ app.delete("/customers/:id", async (req, res) => {[m
+[31m-    await Customer.findByIdAndDelete(req.params.id);[m
+[31m-    res.json({ message: "Customer deleted" });[m
+[32m+[m[41m[m
+[32m+[m[32m    try {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        const customer = await Customer.findByIdAndDelete([m[41m[m
+[32m+[m[32m            req.params.id[m[41m[m
+[32m+[m[32m        );[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        if (!customer) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            return res.status(404).json({[m[41m[m
+[32m+[m[32m                success: false,[m[41m[m
+[32m+[m[32m                message: "Customer not found"[m[41m[m
+[32m+[m[32m            });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        res.json({[m[41m[m
+[32m+[m[32m            success: true,[m[41m[m
+[32m+[m[32m            message: "Customer deleted successfully"[m[41m[m
+[32m+[m[32m        });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    } catch (error) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        res.status(500).json({[m[41m[m
+[32m+[m[32m            success: false,[m[41m[m
+[32m+[m[32m            message: "Server error"[m[41m[m
+[32m+[m[32m        });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m});[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[32m// ADD TRANSACTION[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mapp.post("/transactions", async (req, res) => {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    try {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        const { customerId, amount, product, transactionDate } = req.body;[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        // Check whether customer exists[m[41m[m
+[32m+[m[32m        const customer = await Customer.findById(customerId);[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        if (!customer) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            return res.status(404).json({[m[41m[m
+[32m+[m[32m                success: false,[m[41m[m
+[32m+[m[32m                message: "Customer not found"[m[41m[m
+[32m+[m[32m            });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        const transaction = new Transaction({[m[41m[m
+[32m+[m[32m            customerId,[m[41m[m
+[32m+[m[32m            amount,[m[41m[m
+[32m+[m[32m            product,[m[41m[m
+[32m+[m[32m            transactionDate[m[41m[m
+[32m+[m[32m        });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        const savedTransaction = await transaction.save();[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        res.status(201).json({[m[41m[m
+[32m+[m[32m            success: true,[m[41m[m
+[32m+[m[32m            message: "Transaction added successfully",[m[41m[m
+[32m+[m[32m            transaction: savedTransaction[m[41m[m
+[32m+[m[32m        });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    } catch (error) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        // Validation errors[m[41m[m
+[32m+[m[32m        if (error.name === "ValidationError") {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            const messages = Object.values(error.errors)[m[41m[m
+[32m+[m[32m                .map(err => err.message);[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            return res.status(400).json({[m[41m[m
+[32m+[m[32m                success: false,[m[41m[m
+[32m+[m[32m                message: messages.join(", ")[m[41m[m
+[32m+[m[32m            });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        // Invalid customer ID[m[41m[m
+[32m+[m[32m        if (error.name === "CastError") {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            return res.status(400).json({[m[41m[m
+[32m+[m[32m                success: false,[m[41m[m
+[32m+[m[32m                message: "Invalid customer ID"[m[41m[m
+[32m+[m[32m            });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        res.status(500).json({[m[41m[m
+[32m+[m[32m            success: false,[m[41m[m
+[32m+[m[32m            message: "Server error"[m[41m[m
+[32m+[m[32m        });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m});[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[32m// GET ALL TRANSACTIONS[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mapp.get("/transactions", async (req, res) => {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    try {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        const transactions = await Transaction[m[41m[m
+[32m+[m[32m            .find()[m[41m[m
+[32m+[m[32m            .populate("customerId", "name email phone")[m[41m[m
+[32m+[m[32m            .sort({ transactionDate: -1 });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        res.json({[m[41m[m
+[32m+[m[32m            success: true,[m[41m[m
+[32m+[m[32m            count: transactions.length,[m[41m[m
+[32m+[m[32m            transactions: transactions[m[41m[m
+[32m+[m[32m        });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    } catch (error) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        res.status(500).json({[m[41m[m
+[32m+[m[32m            success: false,[m[41m[m
+[32m+[m[32m            message: "Could not fetch transactions"[m[41m[m
+[32m+[m[32m        });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m});[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[32m// GET CUSTOMER TRANSACTIONS[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mapp.get("/customers/:id/transactions", async (req, res) => {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    try {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        const customer = await Customer.findById(req.params.id);[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        if (!customer) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            return res.status(404).json({[m[41m[m
+[32m+[m[32m                success: false,[m[41m[m
+[32m+[m[32m                message: "Customer not found"[m[41m[m
+[32m+[m[32m            });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        const transactions = await Transaction[m[41m[m
+[32m+[m[32m            .find({ customerId: req.params.id })[m[41m[m
+[32m+[m[32m            .sort({ transactionDate: -1 });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        res.json({[m[41m[m
+[32m+[m[32m            success: true,[m[41m[m
+[32m+[m[32m            customer: customer,[m[41m[m
+[32m+[m[32m            count: transactions.length,[m[41m[m
+[32m+[m[32m            transactions: transactions[m[41m[m
+[32m+[m[32m        });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    } catch (error) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        res.status(400).json({[m[41m[m
+[32m+[m[32m            success: false,[m[41m[m
+[32m+[m[32m            message: "Invalid customer ID"[m[41m[m
+[32m+[m[32m        });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m});[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[32m// CUSTOMER SEGMENTATION[m[41m[m
+[32m+[m[32m// =====================================================[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32mapp.get("/analytics/segmentation", async (req, res) => {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m    try {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        const customers = await Customer.find();[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        const today = new Date();[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        const segmentationData = [];[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m        for (const customer of customers) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            const transactions = await Transaction.find({[m[41m[m
+[32m+[m[32m                customerId: customer._id[m[41m[m
+[32m+[m[32m            }).sort({ transactionDate: -1 });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            // ==========================================[m[41m[m
+[32m+[m[32m            // NO TRANSACTIONS[m[41m[m
+[32m+[m[32m            // ==========================================[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            if (transactions.length === 0) {[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m                segmentationData.push({[m[41m[m
+[32m+[m[32m                    customerId: customer._id,[m[41m[m
+[32m+[m[32m                    name: customer.name,[m[41m[m
+[32m+[m[32m                    email: customer.email,[m[41m[m
+[32m+[m[32m                    totalTransactions: 0,[m[41m[m
+[32m+[m[32m                    totalSpent: 0,[m[41m[m
+[32m+[m[32m                    lastTransaction: null,[m[41m[m
+[32m+[m[32m                    segment: "Inactive"[m[41m[m
+[32m+[m[32m                });[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m                continue;[m[41m[m
+[32m+[m[32m            }[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            // ==========================================[m[41m[m
+[32m+[m[32m            // TOTAL TRANSACTIONS[m[41m[m
+[32m+[m[32m            // ==========================================[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            const totalTransactions = transactions.length;[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            // ==========================================[m[41m[m
+[32m+[m[32m            // TOTAL SPENDING[m[41m[m
+[32m+[m[32m            // ==========================================[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            const totalSpent = transactions.reduce([m[41m[m
+[32m+[m[32m                (total, transaction) => {[m[41m[m
+[32m+[m[32m                    return total + transaction.amount;[m[41m[m
+[32m+[m[32m                },[m[41m[m
+[32m+[m[32m                0[m[41m[m
+[32m+[m[32m            );[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            // ==========================================[m[41m[m
+[32m+[m[32m            // LAST TRANSACTION[m[41m[m
+[32m+[m[32m            // ==========================================[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            const lastTransaction = new Date([m[41m[m
+[32m+[m[32m                transactions[0].transactionDate[m[41m[m
+[32m+[m[32m            );[m[41m[m
+[32m+[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            // Calculate days since last transaction[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            const differenceInTime =[m[41m[m
+[32m+[m[32m                today.getTime() - lastTransaction.getTime();[m[41m[m
+[32m+[m[41m[m
+[32m+[m[32m            const daysSinceLastTransaction = Math.floor([m[41m[m
+[32m+[m[32m         
